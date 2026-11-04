@@ -37,16 +37,16 @@ Spell-checkers catch your typos, but they can't tell you that your reply sounds 
 
 ```mermaid
 flowchart LR
-    A["Type your email"] --> B["Pause"]
-    B --> C["MoodMail asks for a mood"]
+    A["Type your email and pause"] --> C["MoodMail asks for a mood"]
     C --> D["Your draft is rewritten in place"]
     D --> E{"Happy with it?"}
     E -- "Yes" --> F["You press Send"]
     E -- "Not quite" --> G["Undo or try another mood"]
     G --> D
+    F --> H["It goes out in the right mood"]
 
     classDef step fill:#0f766e,stroke:#0f766e,color:#ffffff
-    class A,B,C,D,F,G step
+    class A,C,D,F,G,H step
 ```
 
 ## What it does
