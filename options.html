@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MoodMail settings</title>
+    <link rel="stylesheet" href="ui.css" />
+  </head>
+  <body class="settings">
+    <main>
+      <header class="brand">
+        <img src="icons/icon-48.png" alt="" width="32" height="32" />
+        <strong>MoodMail settings</strong>
+      </header>
+
+      <section class="panel">
+        <h2><label for="apiKey">Gemini API key</label></h2>
+        <p class="hint">
+          MoodMail uses Google's Gemini free tier to rewrite your emails.
+          <a href="https://aistudio.google.com/api-keys" target="_blank" rel="noreferrer">Get a free key</a>
+        </p>
+        <form id="keyForm" class="field">
+          <input id="apiKey" type="password" placeholder="Paste your key" autocomplete="off" spellcheck="false" />
+          <button id="saveKey" class="primary" type="submit">Save</button>
+        </form>
+        <p id="keyStatus" class="status" role="status"></p>
+      </section>
+
+      <section class="panel">
+        <h2><label for="model">Gemini model</label></h2>
+        <p class="hint">If you keep hitting the free limit or Gemini is busy, try a different model.</p>
+        <div class="field">
+          <select id="model">
+            <option value="gemini-3.8-flash">Gemini 3.8 Flash: newest</option>
+            <option value="gemini-3.6-flash">Gemini 3.6 Flash: previous version</option>
+            <option value="gemini-3.5-flash-lite">Gemini 3.5 Flash-Lite: lightweight</option>
+          </select>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Your privacy</h2>
+        <p class="warning">
+          On the free tier, Google can use what you send to improve its products, and human reviewers may read it.
+          Google says not to send sensitive, confidential or personal information.
+          <a href="https://aistudio.google.com/docs/terms" target="_blank" rel="noreferrer">Read Google's terms</a>
+        </p>
+        <ul>
+          <li>Only the text you typed goes to Google, and only after you pick a mood.</li>
+          <li>Your signature and any quoted email thread stay out of the request.</li>
+          <li>Your API key is stored on this device and is never synced or shown to web pages.</li>
+          <li>MoodMail never sends an email for you.</li>
+        </ul>
+      </section>
+    </main>
+
+    <script src="options.js"></script>
+  </body>
+</html>

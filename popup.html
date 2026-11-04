@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>MoodMail</title>
+    <link rel="stylesheet" href="ui.css" />
+  </head>
+  <body class="popup">
+    <header class="brand">
+      <img src="icons/icon-32.png" alt="" width="24" height="24" />
+      <strong>MoodMail</strong>
+      <label class="switch">
+        <input id="enabled" type="checkbox" aria-label="Turn MoodMail on" />
+        <span></span>
+      </label>
+    </header>
+
+    <p id="keyNotice" class="notice" hidden>
+      Add your free Gemini API key to start.
+      <button id="addKey" class="link" type="button">Add key</button>
+    </p>
+
+    <div class="row">
+      <span id="autoAskLabel">Ask for a mood when I pause</span>
+      <label class="switch">
+        <input id="autoAsk" type="checkbox" aria-labelledby="autoAskLabel" />
+        <span></span>
+      </label>
+    </div>
+
+    <button id="improve" class="primary" type="button">Improve this email</button>
+    <p id="status" class="hint" role="status"></p>
+
+    <footer>
+      <button id="settings" class="link" type="button">Settings</button>
+      <span id="shortcut" class="hint"></span>
+    </footer>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
