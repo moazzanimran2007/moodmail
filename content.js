@@ -512,6 +512,7 @@
     .plain { display: block; margin: 8px auto 0; }
 
     .body { margin: 6px 0 0; color: var(--muted); }
+    .tried { margin: 6px 0 0; color: var(--muted); font-size: 11.5px; }
     .check { flex: none; width: 16px; height: 16px; color: var(--accent); }
     .warning { margin: 10px 0 0; padding: 7px 9px; border-radius: 8px; background: var(--warn-bg); color: var(--warn-text); font-size: 12px; }
     .actions { display: flex; align-items: center; gap: 6px; margin-top: 10px; }
@@ -762,7 +763,8 @@
           onclick: () => chrome.runtime.sendMessage({ type: 'open-settings' }),
         })
       : el('button', { className: 'action primary', type: 'button', textContent: 'Try again', onclick: retry });
-    showCard(editor, 'error', header(result.message), el('div', { className: 'actions' }, action));
+    const tried = result.tried ? [el('p', { className: 'tried', textContent: `Tried ${result.tried}` })] : [];
+    showCard(editor, 'error', header(result.message), ...tried, el('div', { className: 'actions' }, action));
   }
 
   // The visible part of an element, after any scrolling containers have clipped it.

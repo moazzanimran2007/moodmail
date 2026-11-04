@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "MoodMail",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Fixes the grammar in your emails and rewrites them in the mood you choose. Built for Gmail, Outlook and Yahoo Mail.",
   "icons": {
     "16": "icons/icon-16.png",

@@ -159,6 +159,7 @@ Could you please check them and send me an updated version by Friday?
 - **Your newest words are safe.** If you keep typing while a rewrite runs, MoodMail leaves your draft alone and offers to run it again.
 - **Your cursor stays put.** Move to the subject line during a rewrite and you can keep typing there.
 - **Each compose window is separate.** A rewrite always lands in the window it started from.
+- **A busy model doesn't stop you.** If one free Gemini model is overloaded or at its limit, MoodMail moves on to the next one by itself.
 - **You're in control.** Turn MoodMail off, or stop the automatic prompt and open it only when you want it.
 
 ## A closer look
@@ -244,7 +245,7 @@ You need Google Chrome on a computer and a free Gemini API key.
 ## Good to know
 
 - **Where it runs:** MoodMail is built for Gmail, Outlook on the web and Yahoo Mail in desktop Chrome.
-- **Free-tier limits:** Google limits how much you can use the free tier. If you reach a limit, MoodMail tells you and leaves your draft alone. You can wait a little or switch models in settings.
+- **Free-tier limits:** Google limits how much you can use the free tier, and its free models can get overloaded. MoodMail tries each free model once per rewrite. If none can answer, it tells you why and leaves your draft alone.
 - **Subject lines:** only the message body is rewritten.
 - **Replies between quoted sections:** if you type in several places around a quote, only your first block of text is rewritten.
 
@@ -262,8 +263,10 @@ You need Google Chrome on a computer and a free Gemini API key.
 | :--- | :--- |
 | **No button on the compose box** | Reload the email tab. Then check that MoodMail and Developer mode are both on at `chrome://extensions`. |
 | **"Google rejected your API key"** | Copy the key again from Google AI Studio and make sure you got all of it. |
-| **"You've hit Gemini's free limit"** | Wait a minute and try again, or choose another model in settings. |
-| **"Gemini is busy right now"** | Try again in a moment, or choose another model in settings. |
+| **"Gemini's free models are all busy"** | Google is short on capacity. Wait a minute or two and try again. The card lists which models were tried. |
+| **"You've hit Gemini's free limit"** | Wait a minute and try again. |
+| **"You've used today's free Gemini allowance"** | The daily limit resets at midnight Pacific time. |
+| **"Could not reach Google"** | Check your connection. After several failed tries, Chrome also pauses extension requests for a short time, so wait a minute and try again. |
 | **"MoodMail was updated"** | Reload the email tab. |
 
 </details>

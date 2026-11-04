@@ -2,9 +2,13 @@
 
 const API_URL = 'https://generativelanguage.googleapis.com/v1beta';
 const API_REVISION = '2026-05-20';
-const DEFAULT_MODEL = 'gemini-3.8-flash';
+const DEFAULT_MODEL = 'gemini-3.5-flash-lite';
+// The free models, in the order MoodMail falls back through them.
+const FREE_MODELS = ['gemini-3.5-flash-lite', 'gemini-3.6-flash', 'gemini-3.8-flash'];
+// Capacity, limits and supported options differ by model, so these failures are worth trying elsewhere.
+const TRY_NEXT_MODEL = new Set(['busy', 'limit', 'model', 'request']);
 const REQUEST_TIMEOUT_MS = 60_000;
-const MAX_ATTEMPTS = 3;
+const MAX_NETWORK_ATTEMPTS = 3;
 const BLOCKED_CODES = new Set(['safety', 'recitation', 'prohibited_content', 'spii', 'blocklist']);
 
 const SYSTEM_PROMPT = `You edit email drafts for the person who wrote them. Each message gives you a draft and the mood the writer wants. Return the finished email in the "email" field.
@@ -57,11 +61,16 @@ function errorForStatus(status, error) {
       return new MoodMailError('key', detail || 'This API key is not allowed to do that. Check it in Settings.', true);
     case 404:
       return new MoodMailError('model', 'That Gemini model is not available. Pick another in Settings.', true);
-    case 429:
-      return new MoodMailError('limit', "You've hit Gemini's free limit. Wait a minute and try again. Daily limits reset at midnight Pacific time.");
-    default:
-      return new MoodMailError('busy', 'Gemini is busy right now. Try again in a moment.');
+    case 429: {
+      const limit = new MoodMailError('limit', "You've hit Gemini's free limit. Wait a minute and try again. Daily limits reset at midnight Pacific time.");
+      limit.daily = error?.code === 'quota_exceeded' || /per.?day|daily/i.test(detail || '');
+      return limit;
+    }
   }
+  if (status === 408 || status >= 500) {
+    return new MoodMailError('busy', 'Gemini is busy right now. Try again in a moment.');
+  }
+  return new MoodMailError('request', detail || `Gemini returned an error (${status}).`);
 }
 
 async function callApi(path, apiKey, init = {}) {
@@ -79,26 +88,67 @@ async function callApi(path, apiKey, init = {}) {
       });
     } catch (err) {
       if (err.name === 'TimeoutError') {
-        throw new MoodMailError('network', 'Gemini took too long to answer. Try again.');
+        throw new MoodMailError('timeout', 'Gemini took too long to answer. Try again.');
       }
-      if (attempt < MAX_ATTEMPTS) {
+      if (attempt < MAX_NETWORK_ATTEMPTS) {
         await sleep(1000 * attempt);
         continue;
       }
-      throw new MoodMailError('network', 'Could not reach Google. Check your connection and try again.');
+      throw new MoodMailError('network', 'Could not reach Google. Check your connection, or wait a minute and try again.');
     }
 
     if (response.ok) return response.json();
 
-    // Free-tier limits take far longer to clear than a quick retry could wait, so 429 is not retried.
-    if ((response.status === 408 || response.status >= 500) && attempt < MAX_ATTEMPTS) {
-      await sleep(1000 * attempt);
-      continue;
-    }
     const body = await response.json().catch(() => null);
     // The interactions endpoint wraps its error in a one-item list. Other endpoints do not.
-    throw errorForStatus(response.status, (Array.isArray(body) ? body[0] : body)?.error);
+    const failure = errorForStatus(response.status, (Array.isArray(body) ? body[0] : body)?.error);
+    failure.status = response.status;
+    throw failure;
   }
+}
+
+function noModelAnswered(failures) {
+  const errors = failures.map(({ error }) => error);
+  const limits = errors.filter((error) => error.code === 'limit');
+  const busy = errors.some((error) => error.code === 'busy');
+  let result;
+  if (errors.some((error) => error.code === 'request')) {
+    result = errors.find((error) => error.code === 'request');
+  } else if (errors.every((error) => error.code === 'model')) {
+    result = errors[0];
+  } else if (errors.some((error) => error.code === 'network')) {
+    result = new MoodMailError('busy', "Gemini is busy, and Chrome has paused MoodMail's requests for a moment. Wait a minute and try again.");
+  } else if (limits.length && busy) {
+    result = new MoodMailError('limit', 'Gemini is busy and some models are at their free limit. Wait a minute and try again.');
+  } else if (limits.length && limits.every((error) => error.daily)) {
+    result = new MoodMailError('limit', "You've used today's free Gemini allowance. It resets at midnight Pacific time.");
+  } else if (limits.length) {
+    result = limits[0];
+  } else {
+    result = new MoodMailError('busy', "Gemini's free models are all busy right now. Your draft is unchanged. Try again in a minute.");
+  }
+  result.tried = failures.map(({ model, error }) => `${model} (${error.status ?? 'no answer'})`).join(', ');
+  return result;
+}
+
+// Each model is asked once per rewrite. Chrome blocks an extension from a URL for a while after
+// repeated server errors, and every model shares this URL, so quick retries would lock MoodMail out.
+async function interact(apiKey, firstModel, request) {
+  const models = [firstModel, ...FREE_MODELS.filter((model) => model !== firstModel)];
+  const failures = [];
+  for (const model of models) {
+    try {
+      return await callApi('/interactions', apiKey, { method: 'POST', body: JSON.stringify({ model, ...request }) });
+    } catch (error) {
+      // After server errors, a request that never leaves the browser is Chrome's block, not the
+      // connection, and the remaining models would only hit the same block.
+      const blocked = error.code === 'network' && failures.some((failure) => failure.error.code === 'busy');
+      if (!blocked && !TRY_NEXT_MODEL.has(error.code)) throw error;
+      failures.push({ model, error });
+      if (blocked) break;
+    }
+  }
+  throw noModelAnswered(failures);
 }
 
 function userMessage(text, mood) {
@@ -114,17 +164,13 @@ async function improve({ text, mood }) {
     throw new MoodMailError('no-key', 'Add your free Gemini API key to start.', true);
   }
 
-  const data = await callApi('/interactions', geminiApiKey, {
-    method: 'POST',
-    body: JSON.stringify({
-      model: geminiModel,
-      system_instruction: SYSTEM_PROMPT,
-      input: userMessage(text, mood),
-      response_format: { type: 'text', mime_type: 'application/json', schema: EMAIL_SCHEMA },
-      generation_config: { thinking_level: 'low' },
-      // Interactions are kept on Google's servers for later retrieval unless this is off.
-      store: false,
-    }),
+  const data = await interact(geminiApiKey, geminiModel, {
+    system_instruction: SYSTEM_PROMPT,
+    input: userMessage(text, mood),
+    response_format: { type: 'text', mime_type: 'application/json', schema: EMAIL_SCHEMA },
+    generation_config: { thinking_level: 'low' },
+    // Interactions are kept on Google's servers for later retrieval unless this is off.
+    store: false,
   });
 
   if (data.status === 'incomplete') {
@@ -168,6 +214,7 @@ async function respond(work, sendResponse) {
       code: known ? err.code : 'unknown',
       message: known ? err.message : 'Something went wrong. Your draft is unchanged.',
       settings: known ? err.settings : false,
+      tried: known ? err.tried : undefined,
     });
   }
 }
