@@ -1,6 +1,24 @@
-// MoodMail content script. It finds the compose box, asks for a mood, and swaps in the rewrite.
+// MoodMail content script. It finds the compose box or form field, asks for a mood, and swaps in the rewrite.
 (() => {
   'use strict';
+
+  const MAIL_HOSTS = /^(?:mail\.google\.com|outlook\.live\.com|outlook\.office\.com|outlook\.office365\.com|outlook\.cloud\.microsoft|mail\.yahoo\.com)$/;
+  const IS_TOP = window === window.top;
+
+  // A form in a frame belongs to the site showing it, which is the site a person would switch off.
+  function topSite() {
+    const origins = location.ancestorOrigins;
+    try {
+      return origins?.length ? new URL(origins[origins.length - 1]).hostname : location.hostname;
+    } catch {
+      return location.hostname;
+    }
+  }
+
+  const SITE = topSite();
+  const ON_MAIL = MAIL_HOSTS.test(SITE);
+  // Webmail keeps its compose box in the top page, so its many hidden frames are left alone.
+  if (ON_MAIL && !IS_TOP) return;
 
   const MOODS = [
     { label: 'Professional', direction: 'polished, respectful and businesslike, clear without sounding stiff' },
@@ -18,6 +36,12 @@
   const PAUSE_MS = 3000;
   const MIN_WORDS = 5;
   const TALL_ENOUGH_PX = 60;
+
+  // On other websites these are never offered: secrets, payment and identity fields, and anything
+  // that isn't prose. Field names are split into words first, so cardNumber reads as "card Number".
+  const PRIVATE_FIELD = /password|passphrase|\bpass.?code|\bpin\b|\botp\b|one.?time|verification.?code|\bsecrets?\b|api.?key|\btokens?\b|private.?key|(?:recovery|seed).?(?:code|phrase|key)|\bssn\b|social.?security|passport|national.?id|tax.?id|licen[cs]e.?(?:number|num\b|no\b)|(?:credit|debit).?card|\bcard.?(?:number|num\b|no\b)|\bcvv\b|\bcvc\b|\biban\b|routing.?(?:number|num\b|no\b)|\baccount.?(?:number|num\b|no\b)|bank.?(?:account|details)/i;
+  const NOT_PROSE = /search|query|captcha|coupon|promo.?code|^\s*q\b/i;
+  const CODE_EDITOR = '.monaco-editor,.CodeMirror,.cm-editor,.ace_editor,.xterm';
 
   // Signatures and quoted threads stay as they are and are never sent to Gemini.
   const PROTECTED = [
@@ -50,7 +74,7 @@
     'H4', 'H5', 'H6', 'HEADER', 'MAIN', 'NAV', 'P', 'PRE', 'SECTION',
   ]);
 
-  let settings = { enabled: true, autoAsk: true };
+  let settings = { enabled: true, autoAsk: true, forms: true, offSites: [] };
   let activeEditor = null; // the compose box the launcher sits on
   let target = null; // the compose box the card is talking about
   let view = null; // what the card is showing, or null when it is closed
@@ -59,6 +83,10 @@
   let placer = null;
   let ui = null;
   const drafts = new WeakMap();
+
+  const isOn = () => settings.enabled && (ON_MAIL || settings.forms) && !settings.offSites.includes(SITE);
+  const isPlainField = (editor) => editor.tagName === 'TEXTAREA' || editor.tagName === 'INPUT';
+  const wordCount = (text) => text.split(/\s+/).filter(Boolean).length;
 
   const stateOf = (editor) => {
     if (!drafts.has(editor)) drafts.set(editor, { asked: false, timer: null });
@@ -71,8 +99,43 @@
     return el.getBoundingClientRect().height >= TALL_ENOUGH_PX;
   }
 
+  const readable = (text) => text.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/[_-]+/g, ' ');
+
+  function isOffLimits(field) {
+    if (field.readOnly || field.disabled || field.closest(CODE_EDITOR)) return true;
+    if (field.getAttribute('spellcheck') === 'false') return true;
+    // Any autocomplete value but on or off says the browser knows this is a personal detail.
+    const autocomplete = field.getAttribute('autocomplete')?.trim();
+    if (autocomplete && !/^(?:on|off)$/i.test(autocomplete)) return true;
+    const role = field.getAttribute('role');
+    const suggests = (field.getAttribute('aria-autocomplete') || 'none') !== 'none';
+    if (role === 'combobox' || role === 'searchbox' || suggests || field.hasAttribute('list')) return true;
+
+    const names = readable(
+      ['name', 'id', 'placeholder', 'aria-label', 'title'].map((name) => field.getAttribute(name) || '').join(' '),
+    );
+    const labelledBy = (field.getAttribute('aria-labelledby') || '').split(/\s+/).filter(Boolean);
+    const labels = [...(field.labels || []), ...labelledBy.map((id) => document.getElementById(id))]
+      .map((label) => label?.textContent || '')
+      .join(' ');
+    // A question can mention searching, so only the field's own names decide that one.
+    return NOT_PROSE.test(names) || PRIVATE_FIELD.test(`${names} ${readable(labels)}`);
+  }
+
+  function findFormField(node) {
+    if (node.tagName === 'TEXTAREA') return isOffLimits(node) ? null : node;
+    if (node.tagName === 'INPUT') {
+      if (node.type !== 'text' || isOffLimits(node)) return null;
+      // A one-line field is usually a name or a date until it holds a sentence.
+      return wordCount(node.value) >= MIN_WORDS ? node : null;
+    }
+    const editor = node.closest('[contenteditable="true"],[contenteditable=""],[contenteditable="plaintext-only"]');
+    return editor && isTall(editor) && !isOffLimits(editor) ? editor : null;
+  }
+
   function findEditor(node) {
-    if (!(node instanceof Element)) return null;
+    if (!(node instanceof Element) || !isOn()) return null;
+    if (!ON_MAIL) return findFormField(node);
     if (node.tagName === 'TEXTAREA') return isTall(node) ? node : null;
     const editor = node.closest('[contenteditable="true"],[contenteditable=""],[contenteditable="plaintext-only"]');
     if (!editor) return null;
@@ -85,7 +148,7 @@
     if (activeEditor?.isConnected) return activeEditor;
     let best = null;
     let bestArea = 0;
-    for (const el of document.querySelectorAll('[contenteditable="true"],[contenteditable=""],textarea')) {
+    for (const el of document.querySelectorAll('[contenteditable="true"],[contenteditable=""],textarea,input')) {
       const editor = findEditor(el);
       if (!editor) continue;
       const { width, height } = editor.getBoundingClientRect();
@@ -219,7 +282,7 @@
   }
 
   function readDraft(editor) {
-    if (editor.tagName === 'TEXTAREA') {
+    if (isPlainField(editor)) {
       return { text: editor.value.trim(), original: editor.value, images: [] };
     }
     const { range, beforeGuard } = draftRange(editor);
@@ -332,6 +395,7 @@
     if (document.execCommand('insertText', false, text)) return;
     editor.value = text;
     editor.dispatchEvent(new Event('input', { bubbles: true }));
+    editor.dispatchEvent(new Event('change', { bubbles: true }));
   }
 
   // Swapping the text moves the selection into the editor. Anyone typing somewhere else by then,
@@ -356,14 +420,14 @@
 
   function writeDraft(editor, draft, rewritten) {
     changeDraft(editor, () => {
-      if (editor.tagName === 'TEXTAREA') putText(editor, rewritten);
+      if (isPlainField(editor)) putText(editor, rewritten);
       else putHtml(editor, markupToHtml(rewritten, draft) + (draft.beforeGuard ? '<div><br></div>' : ''));
     });
   }
 
   function restoreDraft(editor, draft) {
     changeDraft(editor, () => {
-      if (editor.tagName === 'TEXTAREA') putText(editor, draft.original);
+      if (isPlainField(editor)) putText(editor, draft.original);
       else putHtml(editor, draft.html);
     });
   }
@@ -397,9 +461,9 @@
 
   // ---- Rewriting ----
 
-  async function requestRewrite(text, mood) {
+  async function requestRewrite(text, mood, field) {
     try {
-      return await chrome.runtime.sendMessage({ type: 'improve', text, mood });
+      return await chrome.runtime.sendMessage({ type: 'improve', text, mood, field });
     } catch {
       return { ok: false, code: 'stale', message: 'MoodMail was updated. Reload this page and try again.' };
     }
@@ -409,14 +473,15 @@
     stateOf(editor).asked = true;
     clearTimeout(stateOf(editor).timer);
     if (!source.text) {
-      showNote(editor, 'Nothing to improve yet. Type your email first.');
+      showNote(editor, `Nothing to improve yet. Type ${ON_MAIL ? 'your email' : 'something'} first.`);
       return;
     }
 
     const before = readDraft(editor).text;
     const job = ++currentJob;
     showWorking(editor, mood);
-    const result = await requestRewrite(source.text, mood);
+    const field = ON_MAIL ? undefined : { kind: editor.tagName === 'INPUT' ? 'line' : 'form', maxLength: editor.maxLength > 0 ? editor.maxLength : undefined };
+    const result = await requestRewrite(source.text, mood, field);
 
     if (job !== currentJob) return;
     if (!editor.isConnected) {
@@ -428,7 +493,14 @@
     } else if (result.text === source.text && before === source.text) {
       showNote(editor, 'This already reads well, so nothing changed.');
     } else {
-      const rewritten = keepTokens(result.text, source);
+      const text = editor.tagName === 'INPUT' ? result.text.replace(/\s*\n\s*/g, ' ') : result.text;
+      const rewritten = keepTokens(text, source);
+      // The browser would quietly cut off anything past a field's limit.
+      if (editor.maxLength > 0 && rewritten.length > editor.maxLength) {
+        const message = `The rewrite is over this field's ${editor.maxLength} character limit, so your text is unchanged.`;
+        showError(editor, { message }, () => run(editor, mood, source));
+        return;
+      }
       writeDraft(editor, source, rewritten);
       showDone(editor, mood, source, changedDetails(source.text, rewritten));
     }
@@ -581,8 +653,8 @@
       {
         className: 'launcher',
         type: 'button',
-        title: 'Improve this email',
-        'aria-label': 'MoodMail: improve this email',
+        title: ON_MAIL ? 'Improve this email' : 'Improve this text',
+        'aria-label': `MoodMail: improve this ${ON_MAIL ? 'email' : 'text'}`,
         hidden: true,
         onclick: () => {
           if (view) dismiss();
@@ -796,7 +868,7 @@
       return;
     }
     const rect = visibleRect(editor);
-    const visible = settings.enabled && rect.width > 0 && rect.height > 0;
+    const visible = isOn() && rect.width > 0 && rect.height > 0;
     ui.launcher.hidden = !visible;
     ui.card.style.visibility = visible ? '' : 'hidden';
     if (!visible) return;
@@ -804,13 +876,16 @@
     const right = Math.min(rect.right, window.innerWidth - 8);
     const bottom = Math.min(rect.bottom, window.innerHeight - 8);
     ui.launcher.style.left = `${right - 38}px`;
-    ui.launcher.style.top = `${bottom - 38}px`;
+    // Centered in a short field, tucked into the corner of a tall one.
+    ui.launcher.style.top = `${bottom - Math.min(38, (rect.height + 30) / 2)}px`;
 
     if (ui.card.hidden) return;
     const { offsetWidth: width, offsetHeight: height } = ui.card;
-    // Beside the compose box when there is room, then below or above it, so the card does not
-    // cover the text. Only a compose box that fills the screen leaves no choice but to overlap.
+    // Beside the box when there is room, then below or above it, so the card does not cover the
+    // text. Only a box that fills the screen leaves no choice but to overlap.
     let x = rect.left - width - 12;
+    // In webmail the space to the right can hold another compose window.
+    if (!ON_MAIL && x < 8 && right + 12 + width <= window.innerWidth - 8) x = right + 12;
     let y = Math.max(8, Math.min(bottom - height, window.innerHeight - height - 8));
     if (x < 8) {
       x = Math.max(8, right - width - 8);
@@ -822,7 +897,7 @@
   }
 
   function setActive(editor) {
-    if (!settings.enabled) return;
+    if (!isOn()) return;
     ensureUi();
     activeEditor = editor;
     // A card about another compose window no longer applies, unless its rewrite is still running.
@@ -836,11 +911,12 @@
   function scheduleAsk(editor) {
     const state = stateOf(editor);
     clearTimeout(state.timer);
-    if (!settings.enabled || !settings.autoAsk || state.asked) return;
+    if (!isOn() || !settings.autoAsk || state.asked) return;
     state.timer = setTimeout(() => {
       if (!editor.isConnected || view || state.asked) return;
-      const words = readDraft(editor).text.split(/\s+/).filter(Boolean).length;
-      if (words >= MIN_WORDS) showMoods(editor, { auto: true });
+      // Someone who has moved on to the next question isn't pausing on this one.
+      if (!ON_MAIL && document.activeElement !== editor) return;
+      if (wordCount(readDraft(editor).text) >= MIN_WORDS) showMoods(editor, { auto: true });
     }, PAUSE_MS);
   }
 
@@ -882,27 +958,37 @@
   window.addEventListener('scroll', place, true);
 
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+    if (message.type === 'site') {
+      if (IS_TOP) sendResponse({ site: SITE, mail: ON_MAIL });
+      return false;
+    }
     if (message.type !== 'open-moods') return false;
-    if (!settings.enabled) {
-      sendResponse({ ok: false, reason: 'off' });
+    if (!isOn()) {
+      if (IS_TOP) sendResponse({ ok: false, reason: 'off' });
       return false;
     }
-    const editor = findAnyEditor();
-    if (!editor) {
-      sendResponse({ ok: false, reason: 'no-editor' });
+    // Every frame hears this. Only the top page may pick a field nobody is in, and only when
+    // focus isn't inside a frame, so one press never opens two cards.
+    const inFrame = !ON_MAIL && document.activeElement?.tagName === 'IFRAME';
+    const editor = IS_TOP && !inFrame ? findAnyEditor() : findEditor(message.focus && !document.hasFocus() ? null : document.activeElement);
+    if (editor) {
+      setActive(editor);
+      showMoods(editor, { focus: message.focus });
+      sendResponse({ ok: true });
       return false;
     }
-    setActive(editor);
-    showMoods(editor, { focus: message.focus });
-    sendResponse({ ok: true });
-    return false;
+    if (!IS_TOP) return false;
+    // The first answer wins, so the top page waits to let a frame with the field answer first.
+    setTimeout(() => sendResponse({ ok: false, reason: 'no-editor' }), 200);
+    return true;
   });
 
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== 'sync') return;
-    if (changes.enabled) settings.enabled = changes.enabled.newValue;
-    if (changes.autoAsk) settings.autoAsk = changes.autoAsk.newValue;
-    if (!settings.enabled) {
+    for (const name of Object.keys(settings)) {
+      if (changes[name]) settings[name] = changes[name].newValue ?? settings[name];
+    }
+    if (!isOn()) {
       currentJob += 1;
       closeCard();
     }

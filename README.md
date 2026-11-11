@@ -6,7 +6,7 @@
 
 ### Type it however it comes out. Pick a mood. Send the email you meant to write.
 
-A Chrome extension that fixes your grammar and rewrites your draft in the mood you choose, right inside your inbox.
+A Chrome extension that fixes your grammar and rewrites your text in the mood you choose, right where you're typing: in your inbox or in forms on any website.
 
 <br>
 
@@ -31,7 +31,7 @@ A Chrome extension that fixes your grammar and rewrites your draft in the mood y
 
 ## Why MoodMail
 
-Spell-checkers catch your typos, but they can't tell you that your reply sounds too blunt, too stiff or too apologetic. MoodMail handles both. It cleans up your writing and reshapes it to fit the moment, in the compose box you already use, without copying anything into another app.
+Spell-checkers catch your typos, but they can't tell you that your reply sounds too blunt, too stiff or too apologetic. MoodMail handles both. It cleans up your writing and reshapes it to fit the moment, in the box you're already typing in, without copying anything into another app.
 
 ## How it works
 
@@ -153,6 +153,21 @@ Could you please check them and send me an updated version by Friday?
 - **Your font, text color and text direction** carry over too, including right-to-left writing.
 - **Your facts:** Gemini is told to keep every name, date, amount and commitment, and not to invent anything. It's also told to write in the same language as your draft.
 
+### Works on forms too
+
+Job applications, contact forms, support requests, feedback boxes: MoodMail works in text boxes on any website, including forms embedded in a page. One-line fields join in once you've typed a full sentence, so it won't bother you about your name or a date.
+
+<img src="docs/form.png" alt="The mood picker beside a long answer on a job application form" width="720">
+
+<sub>Illustrative example on a sample form.</sub>
+
+- **It only polishes your answer.** It doesn't add a greeting or sign-off.
+- **Character limits are respected.** If a rewrite won't fit a field's limit, your text stays as it was and you can try again.
+- **It never submits anything.** You read the result and press the form's button yourself.
+- **Private fields are skipped.** It leaves alone anything it recognizes as a password or security code, card or bank details, an ID number, contact details, a search box or a code editor.
+
+You can turn forms off in settings, or turn MoodMail off for a single site from the toolbar menu.
+
 ### Made to stay out of your way
 
 - **It never sends anything.** You read the result and press Send yourself.
@@ -198,7 +213,7 @@ Could you please check them and send me an updated version by Friday?
 <td valign="top">
 <img src="docs/popup.png" alt="The MoodMail toolbar menu"><br>
 <b>Controls in your toolbar</b><br>
-<sub>Turn it on or off, or start a rewrite from here.</sub>
+<sub>Turn it on or off, for everywhere or one site, or start a rewrite.</sub>
 </td>
 </tr>
 </table>
@@ -217,7 +232,7 @@ You need Google Chrome on a computer and a free Gemini API key.
 
 3. **Add your key.** The settings page opens by itself. Create a free key at [Google AI Studio](https://aistudio.google.com/api-keys), paste it in and click **Save**.
 
-4. **Reload your email tabs.** Any Gmail, Outlook or Yahoo Mail tabs you already had open need a reload to pick up MoodMail.
+4. **Reload your open tabs.** Any tabs you already had open need a reload to pick up MoodMail.
 
 > [!IMPORTANT]
 > **Leave Developer mode on and keep the folder where it is.** Chrome loads the extension from that folder, and it turns extensions loaded this way off whenever Developer mode is off.
@@ -226,25 +241,28 @@ You need Google Chrome on a computer and a free Gemini API key.
 
 | Way to open it | How |
 | :--- | :--- |
-| **Automatically** | Start typing an email and pause. MoodMail asks for a mood. |
-| **Button on the compose box** | Click the round button at the corner of the message area. |
+| **Automatically** | Start typing an email or a form answer and pause. MoodMail asks for a mood. |
+| **Button on the text box** | Click the round button at the corner of the box you're typing in. |
 | **Keyboard shortcut** | Press `Alt+Shift+M`, or `Option+Shift+M` on a Mac. You can change it at `chrome://extensions/shortcuts`. |
-| **Toolbar menu** | Click the MoodMail icon and choose **Improve this email**. |
+| **Toolbar menu** | Click the MoodMail icon and choose **Improve this text**. The same menu turns MoodMail off for the site you're on. |
 
 ## Privacy
 
 > [!WARNING]
-> **Be careful with sensitive emails.** On Gemini's free tier, Google can use what you send to improve its products, and human reviewers may read it. Google says not to send sensitive, confidential or personal information, so skip MoodMail for those emails. Read [Google's terms](https://aistudio.google.com/docs/terms) for the details.
+> **Be careful with sensitive emails and forms.** On Gemini's free tier, Google can use what you send to improve its products, and human reviewers may read it. Google says not to send sensitive, confidential or personal information, so skip MoodMail for anything like that, including forms about your health, money or legal matters. Read [Google's terms](https://aistudio.google.com/docs/terms) for the details.
 
 - **Nothing is sent until you pick a mood.** Typing and pausing stay on your computer.
-- **Only the text you typed is sent.** Your signature, quoted thread, inline images and tables stay out of the request.
+- **Only the text you typed is sent.** Your signature, quoted thread, inline images and tables stay out of the request. On a form, only the box you're rewriting is sent, not the question or your other answers.
+- **It runs on every website so it can find text boxes.** Chrome will say it can read and change your data on all sites. MoodMail looks only at the box you're using and how that box is labelled, and you can turn off forms or any single site.
+- **Private fields are recognized, not guaranteed.** MoodMail goes by how a field is set up and labelled, so it could miss an unusually built one. Even then, nothing leaves your browser unless you pick a mood.
 - **Your API key stays on your device.** It isn't synced, and web pages can't read it.
 - **There's no MoodMail server and no analytics.** Your browser talks directly to Google.
 - **Requests aren't kept for later retrieval.** MoodMail asks Google not to store them that way. This doesn't change the free-tier terms above.
 
 ## Good to know
 
-- **Where it runs:** MoodMail is built for Gmail, Outlook on the web and Yahoo Mail in desktop Chrome.
+- **Where it runs:** MoodMail is built for Gmail, Outlook on the web and Yahoo Mail in desktop Chrome, and for text boxes in forms on other websites.
+- **Unusual text boxes:** some sites build their text boxes in ways MoodMail can't detect, so those won't get the button.
 - **Free-tier limits:** Google limits how much you can use the free tier, and its free models can get overloaded. MoodMail tries each free model once per rewrite. If none can answer, it tells you why and leaves your draft alone.
 - **Subject lines:** only the message body is rewritten.
 - **Replies between quoted sections:** if you type in several places around a quote, only your first block of text is rewritten.
@@ -252,7 +270,7 @@ You need Google Chrome on a computer and a free Gemini API key.
 ## Project status
 
 > [!NOTE]
-> **This is an early release.** It has been tested in an automated browser against simulated email pages and a simulated Gemini service, and it hasn't been fully verified on the live email sites yet. If something looks wrong on a real site, please [open an issue](https://github.com/moazzanimran2007/moodmail/issues) and say which site you were using.
+> **This is an early release.** It has mostly been tested in an automated browser against simulated email pages, sample forms and a simulated Gemini service, and it hasn't been fully verified on every live site yet. If something looks wrong on a real site, please [open an issue](https://github.com/moazzanimran2007/moodmail/issues) and say which site you were using.
 
 <details>
 <summary><b>Troubleshooting</b></summary>
@@ -261,7 +279,9 @@ You need Google Chrome on a computer and a free Gemini API key.
 
 | What you see | What to do |
 | :--- | :--- |
-| **No button on the compose box** | Reload the email tab. Then check that MoodMail and Developer mode are both on at `chrome://extensions`. |
+| **No button on a text box** | Reload the tab. Check that MoodMail and Developer mode are both on at `chrome://extensions`. One-line fields need a full sentence first, and private fields are skipped on purpose. |
+| **The button shows up where you don't want it** | Click the MoodMail icon and switch off **Use on** for that site. |
+| **"The rewrite is over this field's limit"** | Press **Try again**, or use **Just fix the grammar**, which stays closer to your length. |
 | **"Google rejected your API key"** | Copy the key again from Google AI Studio and make sure you got all of it. |
 | **"Gemini's free models are all busy"** | Google is short on capacity. Wait a minute or two and try again. The card lists which models were tried. |
 | **"You've hit Gemini's free limit"** | Wait a minute and try again. |
@@ -281,7 +301,7 @@ MoodMail is plain JavaScript with no dependencies and no build step.
 ```mermaid
 sequenceDiagram
     actor You
-    participant Page as Compose box
+    participant Page as Text box
     participant Worker as MoodMail background worker
     participant Gemini
     You->>Page: Type and pause
@@ -298,7 +318,7 @@ sequenceDiagram
 | :--- | :--- |
 | `manifest.json` | Extension setup, permissions and the keyboard shortcut |
 | `background.js` | Reads your saved key and calls Gemini |
-| `content.js` | Finds the compose box, shows the mood picker and swaps in the rewrite |
+| `content.js` | Finds the compose box or form field, shows the mood picker and swaps in the rewrite |
 | `popup.html`, `popup.js` | The toolbar menu |
 | `options.html`, `options.js` | The settings page |
 | `ui.css` | Styles for the toolbar menu and settings page |

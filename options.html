@@ -16,7 +16,7 @@
       <section class="panel">
         <h2><label for="apiKey">Gemini API key</label></h2>
         <p class="hint">
-          MoodMail uses Google's Gemini free tier to rewrite your emails.
+          MoodMail uses Google's Gemini free tier to rewrite your text.
           <a href="https://aistudio.google.com/api-keys" target="_blank" rel="noreferrer">Get a free key</a>
         </p>
         <form id="keyForm" class="field">
@@ -39,6 +39,20 @@
       </section>
 
       <section class="panel">
+        <div class="row">
+          <h2><label for="forms">Forms on other websites</label></h2>
+          <label class="switch">
+            <input id="forms" type="checkbox" />
+            <span></span>
+          </label>
+        </div>
+        <p class="hint">
+          Use MoodMail in text boxes on any website, like job applications and contact forms. It always skips passwords,
+          payment details, ID numbers, contact details and search boxes. You can turn it off for one site from the toolbar menu.
+        </p>
+      </section>
+
+      <section class="panel">
         <h2>Your privacy</h2>
         <p class="warning">
           On the free tier, Google can use what you send to improve its products, and human reviewers may read it.
@@ -46,10 +60,11 @@
           <a href="https://aistudio.google.com/docs/terms" target="_blank" rel="noreferrer">Read Google's terms</a>
         </p>
         <ul>
-          <li>Only the text you typed goes to Google, and only after you pick a mood.</li>
+          <li>Only the text you typed in that box goes to Google, and only after you pick a mood.</li>
+          <li>Be careful with forms that ask about your health, money or legal matters.</li>
           <li>Your signature and any quoted email thread stay out of the request.</li>
           <li>Your API key is stored on this device and is never synced or shown to web pages.</li>
-          <li>MoodMail never sends an email for you.</li>
+          <li>MoodMail never sends an email or submits a form for you.</li>
         </ul>
       </section>
     </main>

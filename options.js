@@ -5,6 +5,7 @@ const keyInput = document.getElementById('apiKey');
 const saveButton = document.getElementById('saveKey');
 const keyStatus = document.getElementById('keyStatus');
 const modelSelect = document.getElementById('model');
+const formsSwitch = document.getElementById('forms');
 
 function showStatus(message, kind = '') {
   keyStatus.textContent = message;
@@ -40,6 +41,14 @@ form.addEventListener('submit', async (event) => {
 
 modelSelect.addEventListener('change', () => {
   chrome.storage.local.set({ geminiModel: modelSelect.value });
+});
+
+formsSwitch.addEventListener('change', () => {
+  chrome.storage.sync.set({ forms: formsSwitch.checked });
+});
+
+chrome.storage.sync.get({ forms: true }).then(({ forms }) => {
+  formsSwitch.checked = forms;
 });
 
 chrome.storage.local.get(['geminiApiKey', 'geminiModel']).then(({ geminiApiKey, geminiModel = DEFAULT_MODEL }) => {

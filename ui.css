@@ -201,6 +201,11 @@ button {
   margin-top: 12px;
 }
 
+.popup .row > span:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .popup .notice {
   margin: 12px 0 0;
   padding: 8px 10px;
@@ -267,6 +272,18 @@ button {
 
 .panel a {
   color: var(--accent);
+}
+
+.panel .row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.panel .row h2 {
+  margin: 0;
 }
 
 .field {
