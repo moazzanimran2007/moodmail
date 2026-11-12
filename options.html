@@ -39,6 +39,39 @@
       </section>
 
       <section class="panel">
+        <h2>Your instructions and notes</h2>
+        <p class="hint">Saved on this device and added to your requests. Nothing here is synced.</p>
+        <label class="sub" for="instructions">Instructions for every rewrite</label>
+        <textarea id="instructions" rows="3" maxlength="2000" placeholder="For example: Use British spelling. Keep it short. Sign off with Cheers."></textarea>
+        <label class="sub" for="notes">Notes about you</label>
+        <textarea id="notes" rows="4" maxlength="2000" placeholder="For example: I'm Alex Rivera, a product designer at Northwind. I lead the mobile app team."></textarea>
+        <p class="hint">Notes help MoodMail get names and facts right. They're sent with moods and requests, not with "Just fix the grammar".</p>
+        <div class="row spaced">
+          <label class="sub" for="docInput">Documents</label>
+          <button id="docAdd" class="link" type="button">Add a document</button>
+          <input id="docInput" type="file" multiple hidden accept=".pdf,.docx,.pptx,.xlsx,.txt,.md,.markdown,.csv,.json,.xml,.html,.htm" />
+        </div>
+        <p class="hint">
+          Like your résumé or a product sheet. Text files are read on this device. Gemini reads PDF, Word, PowerPoint and Excel
+          files once, when you add them. Up to 5 documents, 10 MB each.
+        </p>
+        <ul id="docList" class="docs"></ul>
+        <p id="docStatus" class="status" role="status"></p>
+        <div class="row spaced">
+          <label class="sub" for="pageContext">Use the page for context</label>
+          <label class="switch">
+            <input id="pageContext" type="checkbox" />
+            <span></span>
+          </label>
+        </div>
+        <p class="hint">
+          Also sends the email you're replying to, or a form's question and the text on its page. You can switch this on the card
+          each time too.
+        </p>
+        <p id="notesStatus" class="status" role="status"></p>
+      </section>
+
+      <section class="panel">
         <div class="row">
           <h2><label for="forms">Forms on other websites</label></h2>
           <label class="switch">
@@ -60,9 +93,17 @@
           <a href="https://aistudio.google.com/docs/terms" target="_blank" rel="noreferrer">Read Google's terms</a>
         </p>
         <ul>
-          <li>Only the text you typed in that box goes to Google, and only after you pick a mood.</li>
+          <li>Nothing goes to Google until you pick a mood or send a request.</li>
+          <li>
+            What you typed goes, with your notes and, if page context is on, the email you're replying to or the form's
+            question and page text. "Just fix the grammar" sends only what you typed.
+          </li>
           <li>Be careful with forms that ask about your health, money or legal matters.</li>
-          <li>Your signature and any quoted email thread stay out of the request.</li>
+          <li>
+            Documents are kept on this device. PDF and Office files go to Google once to be read, and the text of the documents
+            you switch on goes with moods and requests. Leave out private details like your address or ID numbers.
+          </li>
+          <li>Your signature is never sent, and a quoted email thread is only ever used as context, never rewritten.</li>
           <li>Your API key is stored on this device and is never synced or shown to web pages.</li>
           <li>MoodMail never sends an email or submits a form for you.</li>
         </ul>

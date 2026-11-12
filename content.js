@@ -35,6 +35,8 @@
 
   const PAUSE_MS = 3000;
   const MIN_WORDS = 5;
+  const CONTEXT_LIMIT = 6000;
+  const REQUEST_MAX = 500;
   const TALL_ENOUGH_PX = 60;
 
   // On other websites these are never offered: secrets, payment and identity fields, and anything
@@ -74,7 +76,7 @@
     'H4', 'H5', 'H6', 'HEADER', 'MAIN', 'NAV', 'P', 'PRE', 'SECTION',
   ]);
 
-  let settings = { enabled: true, autoAsk: true, forms: true, offSites: [] };
+  let settings = { enabled: true, autoAsk: true, forms: true, offSites: [], pageContext: true, useDocuments: true, documentCount: 0 };
   let activeEditor = null; // the compose box the launcher sits on
   let target = null; // the compose box the card is talking about
   let view = null; // what the card is showing, or null when it is closed
@@ -459,11 +461,84 @@
     ];
   }
 
+  // ---- Context for grounding ----
+
+  // Quoted mail inside the compose box, and messages open elsewhere on the page.
+  const QUOTED = '.gmail_quote,.gmail_quote_container,#divRplyFwdMsg,#x_divRplyFwdMsg,#mail-editor-reference-message-container,[class*="yahoo_quoted"],[id*="yahoo_quoted"],blockquote[type="cite"]';
+  const OPEN_MESSAGE = '.a3s,#UniqueMessageBody,[data-test-id="message-view-body-content"],[aria-label="Message body"]:not([contenteditable])';
+  // Page text that is someone's typed answer, private, or not part of what the page says.
+  const NOT_CONTEXT = 'script,style,noscript,template,textarea,input,select,option,button,nav,footer,[role="navigation"],[contenteditable="true"],[contenteditable=""],[contenteditable="plaintext-only"],[aria-hidden="true"],#moodmail-root';
+
+  const clip = (text) => (text.length > CONTEXT_LIMIT ? `${text.slice(0, CONTEXT_LIMIT)}…` : text);
+
+  // The visible text inside root, leaving out form controls and anything typed.
+  function textIn(root, limit = CONTEXT_LIMIT) {
+    const lines = [];
+    let size = 0;
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode: (node) => {
+        const parent = node.parentElement;
+        if (!parent || !node.nodeValue.trim() || parent.closest(NOT_CONTEXT)) return NodeFilter.FILTER_REJECT;
+        return parent.checkVisibility?.() === false ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT;
+      },
+    });
+    for (let node = walker.nextNode(); node && size < limit; node = walker.nextNode()) {
+      const text = node.nodeValue.replace(/\s+/g, ' ').trim();
+      if (text === lines.at(-1)) continue;
+      lines.push(text);
+      size += text.length + 1;
+    }
+    return lines.join('\n');
+  }
+
+  function mailThread(editor) {
+    const quote = editor.querySelector(QUOTED);
+    if (quote) {
+      const range = document.createRange();
+      range.selectNode(quote);
+      // Outlook puts the quoted message after its reply header rather than inside it.
+      if (quote.matches('#divRplyFwdMsg,#x_divRplyFwdMsg')) range.setEndAfter(quote.parentElement.lastChild);
+      return toMarkup(range.cloneContents()).text.replace(/⟦\d+⟧/g, '').trim();
+    }
+    const open = [...document.querySelectorAll(OPEN_MESSAGE)].filter(
+      (message) => !message.contains(editor) && !editor.contains(message) && message.checkVisibility?.() !== false,
+    );
+    return open.length ? textIn(open.at(-1)) : '';
+  }
+
+  function fieldQuestion(field) {
+    const ids = ['aria-labelledby', 'aria-describedby'].flatMap((name) => (field.getAttribute(name) || '').split(/\s+/));
+    const sources = [...(field.labels || []), ...ids.filter(Boolean).map((id) => document.getElementById(id))];
+    sources.push(field.closest('fieldset')?.querySelector('legend'));
+    const texts = sources.map((node) => (node ? textIn(node, 500) : ''));
+    texts.push(field.getAttribute('aria-label'), field.getAttribute('placeholder'));
+    return [...new Set(texts.map((text) => text?.replace(/\s+/g, ' ').trim()).filter(Boolean))].join(' / ');
+  }
+
+  // Background for grounding: the email being replied to, or the question and page around a form box.
+  // Webmail page text is left out because it holds the inbox and the account's address.
+  function gatherContext(editor) {
+    if (ON_MAIL) {
+      const thread = mailThread(editor);
+      return thread ? clip(`The email being replied to:\n${thread}`) : undefined;
+    }
+    const question = fieldQuestion(editor);
+    const root = document.querySelector('main,[role="main"]') || document.body;
+    const page = root ? textIn(root) : '';
+    const parts = [
+      document.title.trim() && `Page title: ${document.title.trim()}`,
+      question && `The question this box answers: ${question}`,
+      page && `Text on the page:\n${page}`,
+    ];
+    const context = parts.filter(Boolean).join('\n\n');
+    return context ? clip(context) : undefined;
+  }
+
   // ---- Rewriting ----
 
-  async function requestRewrite(text, mood, field) {
+  async function requestRewrite(text, mood, field, context) {
     try {
-      return await chrome.runtime.sendMessage({ type: 'improve', text, mood, field });
+      return await chrome.runtime.sendMessage({ type: 'improve', text, mood, field, context, useDocuments: settings.useDocuments });
     } catch {
       return { ok: false, code: 'stale', message: 'MoodMail was updated. Reload this page and try again.' };
     }
@@ -472,7 +547,7 @@
   async function run(editor, mood, source = readDraft(editor)) {
     stateOf(editor).asked = true;
     clearTimeout(stateOf(editor).timer);
-    if (!source.text) {
+    if (!source.text && !mood.prompt) {
       showNote(editor, `Nothing to improve yet. Type ${ON_MAIL ? 'your email' : 'something'} first.`);
       return;
     }
@@ -481,7 +556,9 @@
     const job = ++currentJob;
     showWorking(editor, mood);
     const field = ON_MAIL ? undefined : { kind: editor.tagName === 'INPUT' ? 'line' : 'form', maxLength: editor.maxLength > 0 ? editor.maxLength : undefined };
-    const result = await requestRewrite(source.text, mood, field);
+    // Fixing grammar needs nothing but the draft, so it never sends the page.
+    const context = !mood.grammarOnly && settings.pageContext ? gatherContext(editor) : undefined;
+    const result = await requestRewrite(source.text, mood, field, context);
 
     if (job !== currentJob) return;
     if (!editor.isConnected) {
@@ -582,6 +659,9 @@
     .text-button { padding: 2px 0; border: 0; background: none; color: var(--accent); font-size: 12.5px; font-weight: 500; }
     .text-button:hover { text-decoration: underline; }
     .plain { display: block; margin: 8px auto 0; }
+    .contexts { display: grid; gap: 6px; margin-top: 10px; padding-top: 9px; border-top: 1px solid var(--line); }
+    .context { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 12px; cursor: pointer; }
+    .context input { margin: 0; accent-color: var(--accent); }
 
     .body { margin: 6px 0 0; color: var(--muted); }
     .tried { margin: 6px 0 0; color: var(--muted); font-size: 11.5px; }
@@ -717,20 +797,25 @@
     closeCard();
   }
 
-  function showMoods(editor, { auto = false, focus = false, source } = {}) {
+  function showMoods(editor, { auto = false, focus = false, source, request = '' } = {}) {
     const go = (mood) => run(editor, mood, source);
+    // An empty box has nothing to rewrite, so it only takes a request.
+    const empty = !(source || readDraft(editor)).text;
     const input = el('input', {
       type: 'text',
-      placeholder: 'Or describe it: firm but kind',
-      maxLength: 120,
-      'aria-label': 'Describe the mood you want',
+      value: request,
+      placeholder: empty
+        ? ON_MAIL ? 'Write a reply saying I can make Tuesday' : 'Write a short, friendly answer'
+        : 'Or ask for anything: make it shorter',
+      maxLength: REQUEST_MAX,
+      'aria-label': 'Tell MoodMail what to write or change',
       oninput: () => {
         goButton.disabled = !input.value.trim();
       },
     });
     const goButton = el(
       'button',
-      { className: 'go', type: 'submit', disabled: true, 'aria-label': 'Rewrite in this mood' },
+      { className: 'go', type: 'submit', disabled: !request, 'aria-label': 'Send this request' },
       icon('arrow'),
     );
     const form = el(
@@ -740,12 +825,33 @@
         onsubmit: (e) => {
           e.preventDefault();
           const label = input.value.trim();
-          if (label) go({ label });
+          if (label) go({ label, prompt: true });
         },
       },
       input,
       goButton,
     );
+    const toggle = (name, label, key) => {
+      const box = el('input', {
+        type: 'checkbox',
+        name,
+        checked: settings[key],
+        onchange: () => {
+          settings[key] = box.checked;
+          chrome.storage.sync.set({ [key]: box.checked });
+        },
+      });
+      return el('label', { className: 'context' }, box, label);
+    };
+    const contextRow = el('div', { className: 'contexts' }, toggle('page', 'Use this page for context', 'pageContext'));
+    if (settings.documentCount > 0) {
+      contextRow.append(toggle('documents', `Use my documents (${settings.documentCount})`, 'useDocuments'));
+    }
+    if (empty) {
+      showCard(editor, 'moods', header('What should MoodMail write?'), form, contextRow);
+      input.focus();
+      return;
+    }
     const chips = MOODS.map((mood) =>
       el('button', { className: 'chip', type: 'button', textContent: mood.label, onclick: () => go(mood) }),
     );
@@ -761,19 +867,21 @@
         textContent: 'Just fix the grammar',
         onclick: () => go(GRAMMAR_ONLY),
       }),
+      contextRow,
     );
-    if (focus) chips[0].focus();
+    if (request) input.focus();
+    else if (focus) chips[0].focus();
   }
 
   function showWorking(editor, mood) {
-    const title = mood.grammarOnly ? 'Fixing the grammar…' : `Rewriting: ${mood.label}…`;
+    const title = mood.grammarOnly ? 'Fixing the grammar…' : mood.prompt ? 'Writing…' : `Rewriting: ${mood.label}…`;
     const head = header(title);
     head.prepend(el('span', { className: 'spinner', role: 'status', 'aria-label': 'Working' }));
     showCard(editor, 'working', head);
   }
 
   function showDone(editor, mood, source, details) {
-    const head = header(mood.grammarOnly ? 'Grammar fixed' : `Improved: ${mood.label}`);
+    const head = header(mood.grammarOnly ? 'Grammar fixed' : mood.prompt ? `Done: ${mood.label}` : `Improved: ${mood.label}`);
     head.prepend(icon('check', 'check'));
     const children = [head];
     if (details.length) {
@@ -795,8 +903,8 @@
         el('button', {
           className: 'action',
           type: 'button',
-          textContent: 'Try another mood',
-          onclick: () => showMoods(editor, { source }),
+          textContent: mood.prompt ? 'Change request' : 'Try another mood',
+          onclick: () => showMoods(editor, { source, request: mood.prompt ? mood.label : '' }),
         }),
       ),
     );

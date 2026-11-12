@@ -286,6 +286,40 @@ button {
   margin: 0;
 }
 
+.panel .row.spaced {
+  margin-top: 14px;
+}
+
+.panel label.sub {
+  display: block;
+  margin: 12px 0 0;
+  font-weight: 600;
+  font-size: 12.5px;
+}
+
+.panel .row label.sub {
+  margin: 0;
+}
+
+.panel textarea {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface);
+  font: inherit;
+  color: inherit;
+  resize: vertical;
+}
+
+.panel textarea:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 0;
+  border-color: transparent;
+}
+
 .field {
   display: flex;
   gap: 8px;
@@ -337,4 +371,67 @@ button {
 
 .panel li + li {
   margin-top: 4px;
+}
+
+/* Documents on the settings page */
+
+.panel .docs {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  color: var(--text);
+}
+
+.panel .docs li {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.panel .docs li + li {
+  margin-top: 8px;
+}
+
+.doc-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.doc-name {
+  min-width: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.docs .hint {
+  margin-top: 2px;
+}
+
+.docs details {
+  margin-top: 6px;
+}
+
+.docs summary {
+  cursor: pointer;
+  color: var(--accent);
+  font-size: 12px;
+}
+
+.docs pre {
+  max-height: 180px;
+  overflow: auto;
+  margin: 6px 0 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--page);
+  white-space: pre-wrap;
+  font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.link:disabled {
+  opacity: 0.45;
+  cursor: default;
+  text-decoration: none;
 }

@@ -6,7 +6,7 @@
 
 ### Type it however it comes out. Pick a mood. Send the email you meant to write.
 
-A Chrome extension that fixes your grammar and rewrites your text in the mood you choose, right where you're typing: in your inbox or in forms on any website.
+A Chrome extension that fixes your grammar, rewrites your text in the mood you choose, or writes what you ask for, right where you're typing: in your inbox or in forms on any website.
 
 <br>
 
@@ -94,6 +94,20 @@ If a number, link or email address differs after the rewrite, a **Double-check**
 
 </td>
 </tr>
+<tr>
+<td valign="top">
+
+**Writes what you ask for**<br>
+Type a request like *"reply that I can make Tuesday"* or *"make it shorter"*, and the answer appears right in the box.
+
+</td>
+<td valign="top">
+
+**Knows the context**<br>
+It can read the email you're replying to, a form's question and page, notes you save about yourself and documents you add, so names and facts come out right.
+
+</td>
+</tr>
 </table>
 
 ### Same draft, different moods
@@ -145,13 +159,38 @@ Could you please check them and send me an updated version by Friday?
 | 🧱 **Firm** | Direct about expectations and boundaries, while staying civil |
 | ✍️ **Your own** | Describe any mood you like in your own words |
 
+### Ask for anything
+
+Open MoodMail on an empty box and it asks what to write. Open it on a draft and, next to the moods, you can ask for any change.
+
+<img src="docs/ask.png" alt="A request typed into MoodMail's card beside an empty answer box on a job application form" width="720">
+
+<sub>Illustrative example on a sample form.</sub>
+
+- **Write from scratch:** *"Write a reply saying I can make Tuesday"* or *"Say why I fit this role, warmly."*
+- **Change a draft:** *"Make it shorter,"* *"Add that the invoice is attached"* or simply *"firm but kind."*
+- **Answers land in place.** The text goes straight into the box, with **Undo** and **Change request** ready if it isn't quite right.
+
+### Your instructions, notes, documents and context
+
+These help MoodMail sound like you and get the details right. All of them live on the settings page.
+
+| | What it does |
+| :--- | :--- |
+| **Instructions** | Rules for every rewrite, like *"Use British spelling"* or *"Sign off with Cheers."* They're added to MoodMail's own instructions. |
+| **Notes about you** | Facts like your name, role and company, so requests can draw on them instead of guessing. |
+| **Documents** | Add up to five files, like your résumé or a product sheet. MoodMail reads text, Markdown, CSV and HTML files on your computer. Gemini reads PDF, Word, PowerPoint and Excel files once, when you add them. You can see the exact text MoodMail will use, switch each document on or off, and switch them all off on the card. |
+| **Page context** | Lets MoodMail read the email you're replying to, or a form's question and the page around it. You can switch it on the card for each request. |
+
+Your instructions, notes and documents are saved on your computer and never synced. **Just fix the grammar** never sends your notes, documents or the page.
+
 ### What it leaves alone
 
-- **Your signature and quoted thread** stay exactly as they are and are never sent for rewriting.
+- **Your signature and quoted thread** stay exactly as they are. Your signature is never sent, and the quoted thread is only read as context when page context is on.
 - **Inline images and tables** stay where they belong.
 - **Links, bold, italics and lists** carry through the rewrite.
 - **Your font, text color and text direction** carry over too, including right-to-left writing.
-- **Your facts:** Gemini is told to keep every name, date, amount and commitment, and not to invent anything. It's also told to write in the same language as your draft.
+- **Your facts:** Gemini is told to keep every name, date, amount and commitment, and not to invent anything beyond your draft, your request, your notes and the page. It's also told to write in the same language as your draft.
 
 ### Works on forms too
 
@@ -208,7 +247,7 @@ You can turn forms off in settings, or turn MoodMail off for a single site from 
 <td valign="top">
 <img src="docs/settings.png" alt="The MoodMail settings page"><br>
 <b>Simple setup</b><br>
-<sub>Paste your key, choose a model and you're done.</sub>
+<sub>Your key, model, instructions, notes, documents and context.</sub>
 </td>
 <td valign="top">
 <img src="docs/popup.png" alt="The MoodMail toolbar menu"><br>
@@ -242,17 +281,19 @@ You need Google Chrome on a computer and a free Gemini API key.
 | Way to open it | How |
 | :--- | :--- |
 | **Automatically** | Start typing an email or a form answer and pause. MoodMail asks for a mood. |
-| **Button on the text box** | Click the round button at the corner of the box you're typing in. |
+| **Button on the text box** | Click the round button at the corner of the box you're typing in. In an empty box, it asks what to write. |
 | **Keyboard shortcut** | Press `Alt+Shift+M`, or `Option+Shift+M` on a Mac. You can change it at `chrome://extensions/shortcuts`. |
 | **Toolbar menu** | Click the MoodMail icon and choose **Improve this text**. The same menu turns MoodMail off for the site you're on. |
 
 ## Privacy
 
 > [!WARNING]
-> **Be careful with sensitive emails and forms.** On Gemini's free tier, Google can use what you send to improve its products, and human reviewers may read it. Google says not to send sensitive, confidential or personal information, so skip MoodMail for anything like that, including forms about your health, money or legal matters. Read [Google's terms](https://aistudio.google.com/docs/terms) for the details.
+> **Be careful with sensitive emails and forms.** On Gemini's free tier, Google can use what you send to improve its products, and human reviewers may read it. Google says not to send sensitive, confidential or personal information, so skip MoodMail for anything like that, including forms about your health, money or legal matters. With page context on, the email you're replying to or the page you're on is sent too, and so is the text of any documents you've switched on. Switch these off on the card when that matters. Read [Google's terms](https://aistudio.google.com/docs/terms) for the details.
 
-- **Nothing is sent until you pick a mood.** Typing and pausing stay on your computer.
-- **Only the text you typed is sent.** Your signature, quoted thread, inline images and tables stay out of the request. On a form, only the box you're rewriting is sent, not the question or your other answers.
+- **Nothing is sent until you pick a mood or send a request.** Typing and pausing stay on your computer.
+- **What's sent:** the text in the box, your mood or request, your notes and the text of the documents you've switched on. With page context on, MoodMail adds the email you're replying to, or a form's page title, question and visible page text. **Just fix the grammar** sends only the text in the box.
+- **Documents:** text files never leave your computer until they're used in a request. PDF and Office files are sent to Gemini once, when you add them, so it can read their text. After that only the text is kept and sent. Leave out private details like your address, phone number or ID numbers.
+- **What's never sent:** your signature, inline images, tables, your other answers on a form, hidden page text, and, on webmail, your inbox or anything outside the email you're replying to.
 - **It runs on every website so it can find text boxes.** Chrome will say it can read and change your data on all sites. MoodMail looks only at the box you're using and how that box is labelled, and you can turn off forms or any single site.
 - **Private fields are recognized, not guaranteed.** MoodMail goes by how a field is set up and labelled, so it could miss an unusually built one. Even then, nothing leaves your browser unless you pick a mood.
 - **Your API key stays on your device.** It isn't synced, and web pages can't read it.
@@ -263,6 +304,8 @@ You need Google Chrome on a computer and a free Gemini API key.
 
 - **Where it runs:** MoodMail is built for Gmail, Outlook on the web and Yahoo Mail in desktop Chrome, and for text boxes in forms on other websites.
 - **Unusual text boxes:** some sites build their text boxes in ways MoodMail can't detect, so those won't get the button.
+- **Document limits:** up to five documents of 10 MB each. Long documents are shortened to fit, and the settings page tells you when that happens.
+- **Page context is a best effort:** MoodMail reads the quoted email in your reply, or the message open on the page. Webmail layouts vary and change, so it may not always find the message. Very long pages are cut short.
 - **Free-tier limits:** Google limits how much you can use the free tier, and its free models can get overloaded. MoodMail tries each free model once per rewrite. If none can answer, it tells you why and leaves your draft alone.
 - **Subject lines:** only the message body is rewritten.
 - **Replies between quoted sections:** if you type in several places around a quote, only your first block of text is rewritten.
@@ -282,6 +325,8 @@ You need Google Chrome on a computer and a free Gemini API key.
 | **No button on a text box** | Reload the tab. Check that MoodMail and Developer mode are both on at `chrome://extensions`. One-line fields need a full sentence first, and private fields are skipped on purpose. |
 | **The button shows up where you don't want it** | Click the MoodMail icon and switch off **Use on** for that site. |
 | **"The rewrite is over this field's limit"** | Press **Try again**, or use **Just fix the grammar**, which stays closer to your length. |
+| **A PDF or Office file won't add** | The settings page says why. If Gemini was busy, try again in a minute. For a very long file, add the part you need as a text file. |
+| **An answer ignores the email you're replying to** | Check that **Use this page for context** is ticked on the card. If MoodMail can't find the message on that site, put the key details in your request. |
 | **"Google rejected your API key"** | Copy the key again from Google AI Studio and make sure you got all of it. |
 | **"Gemini's free models are all busy"** | Google is short on capacity. Wait a minute or two and try again. The card lists which models were tried. |
 | **"You've hit Gemini's free limit"** | Wait a minute and try again. |
@@ -307,20 +352,20 @@ sequenceDiagram
     You->>Page: Type and pause
     Page-->>You: What mood are you going for?
     You->>Page: Pick a mood
-    Page->>Worker: Your typed text and the mood
-    Worker->>Gemini: Rewrite request using your key
-    Gemini-->>Worker: Rewritten email
-    Worker-->>Page: Rewritten email
+    Page->>Worker: Your text, the mood or request, and any page context
+    Worker->>Gemini: Request with your instructions and notes, using your key
+    Gemini-->>Worker: Finished text
+    Worker-->>Page: Finished text
     Page-->>You: Draft updated, with Undo ready
 ```
 
 | File | What it does |
 | :--- | :--- |
 | `manifest.json` | Extension setup, permissions and the keyboard shortcut |
-| `background.js` | Reads your saved key and calls Gemini |
-| `content.js` | Finds the compose box or form field, shows the mood picker and swaps in the rewrite |
+| `background.js` | Reads your saved key, instructions, notes and documents, and calls Gemini |
+| `content.js` | Finds the compose box or form field, gathers page context, shows the mood picker and swaps in the result |
 | `popup.html`, `popup.js` | The toolbar menu |
-| `options.html`, `options.js` | The settings page |
+| `options.html`, `options.js` | The settings page, including adding documents |
 | `ui.css` | Styles for the toolbar menu and settings page |
 
 </details>
